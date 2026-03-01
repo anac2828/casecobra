@@ -4,14 +4,23 @@ import Stripe from 'stripe'
 import { db } from '@/src/db'
 import { NextResponse } from 'next/server'
 
+interface CustomSession extends Stripe.Checkout.Session {
+  shipping?: {
+    address: Stripe.Address
+  }
+}
+
 export async function POST(req: Request) {
   try {
     //* 1 Get request body from stripe when user pays in the stripe portal
+
     const body = await req.text()
     const signature = (await headers()).get('stripe-signature')
 
     //  Signature error handler
-    if (!signature) return new Response('Invalid signature', { status: 400 })
+    if (!signature) {
+      return new Response('Missing stripe-signature header', { status: 400 })
+    }
 
     //* 2 Create webhook event
     const event = await stripe.webhooks.constructEventAsync(
@@ -19,35 +28,29 @@ export async function POST(req: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!,
     )
-    console.log('EVENT', event.type)
+
     //* 3 - Listen for event type
     if (event.type === 'checkout.session.completed') {
-      // Error handler
-      if (!event.data.object.customer_details?.email)
-        throw new Error('Missing user email')
-
       // 1 CREATE STRIPE SESSION
       // as Stripe.Checkout.Session is for typescript type safety
-      const session = event.data.object as Stripe.Checkout.Session
-
-      // metadata saved during the checkout process in the configure/preview/actions.ts
-      const { userId, orderId } = session.metadata || {
-        userId: null,
-        orderId: null,
-      }
+      const session: CustomSession = event.data.object
+      // const session = event.data.object as Stripe.Checkout.Session
 
       // Error handler
-      if (!userId || !orderId) return new Error('Invalid request metadata')
+      if (!session.customer_details?.email) {
+        throw new Error('Missing user email')
+      }
+
+      // metadata saved during the checkout process in the configure/preview/actions.ts
+      const { userId, orderId } = session.metadata ?? {}
+
+      // Error handler
+      if (!userId || !orderId)
+        return new NextResponse('Invalid request metadata')
 
       //2 - GET SHIPPING DETAILS - collected_information.shipping_details.address or .name
       const billingAddress = session.customer_details!.address
       const shippingAddress = session.shipping!.address
-
-      //  "city": "Test City",
-      // "country":  "US",
-      // "line1": "11234 Street",
-      // "postal_code":  "12345",
-      // "state":  "NY",
 
       await db.order.update({
         where: { id: orderId },
@@ -56,11 +59,11 @@ export async function POST(req: Request) {
           shippingAddress: {
             create: {
               name: session.customer_details!.name!,
-              city: shippingAddress.city,
-              country: shippingAddress.country,
-              postalCode: shippingAddress.postal_code,
+              city: shippingAddress.city!,
+              country: shippingAddress.country!,
+              postalCode: shippingAddress.postal_code!,
               state: shippingAddress.state,
-              street: shippingAddress.line1,
+              street: shippingAddress.line1!,
             },
           },
           billingAddress: {
