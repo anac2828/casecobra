@@ -2,6 +2,7 @@ import { LucideProps } from 'lucide-react'
 
 export const Icon = {
   underline: (props: LucideProps) => (
+    // <object type='image/svg+xml' data='/underline.svg'></object>
     <svg {...props} viewBox='0 0 687 155'>
       <g
         stroke='currentColor'

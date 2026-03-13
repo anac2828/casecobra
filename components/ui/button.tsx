@@ -63,6 +63,7 @@ function Button({
     >
       {isLoading && loadingText ? loadingText : children}
       {isLoading ? (
+        // Three animated dots to display when isLoading and LoadingText are passed as props
         <span className='ml-1.5 flex items-center gap-1'>
           <span className='animate-flashing w-1 h-1 bg-white rounded-full inline-block'></span>
           <span className='animate-flashing w-1 h-1 bg-white rounded-full inline-block delay-300'></span>

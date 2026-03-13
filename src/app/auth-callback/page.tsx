@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAuthStatus } from './actions'
 import { useRouter } from 'next/navigation'
@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react'
 
 // This route (api/auth-callback) will be called by the modalWindow login button in the configure/preview route
 export default function Page() {
-  const [configId, setConfigId] = useState<string | null>(() => {
+  const [configId] = useState<string | null>(() => {
     return typeof window !== 'undefined'
       ? localStorage.getItem('configurationId')
       : null
@@ -19,7 +19,7 @@ export default function Page() {
   const { data } = useQuery({
     queryKey: ['auth-callback'],
     queryFn: async () => await getAuthStatus(),
-    retry: true, // Will cthe getAuthStatus() function again until user is logged in
+    retry: true, // Will call the getAuthStatus() function again until user is logged in
     retryDelay: 500,
   })
 

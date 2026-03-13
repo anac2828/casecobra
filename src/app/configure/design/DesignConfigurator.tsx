@@ -50,7 +50,7 @@ export default function DesignConfigurator({
   const { startUpload } = useUploadThing('imageUploader')
   const router = useRouter()
   // saveConfig will save the configurations selected by the user in the database.
-  const { mutate: saveConfig } = useMutation({
+  const { mutate: saveConfig, isPending } = useMutation({
     mutationKey: ['save-config'], // key to identify the mutation - can be used for caching and invalidating the mutation
     mutationFn: async (args: SaveConfigArgs) => {
       await Promise.all([saveImgConfiguration(), saveCaseConfig(args)])
@@ -423,6 +423,8 @@ export default function DesignConfigurator({
               </p>
               <Button
                 className='w-full shrink'
+                isLoading={isPending}
+                loadingText='Saving'
                 size='sm'
                 onClick={() =>
                   saveConfig({

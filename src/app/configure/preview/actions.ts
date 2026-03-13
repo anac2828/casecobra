@@ -5,7 +5,7 @@ import { Order } from '@/src/generated/prisma/client'
 import { stripe } from '@/src/lib/stripe'
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server'
 
-// This function will be used in the /configure/preview page.tsx
+// This function will be used in the /configure/preview DesignPreview.tsx
 export async function createCheckoutSession({
   configId,
 }: {
@@ -58,13 +58,13 @@ export async function createCheckoutSession({
   //* 5 - Create product in stripe
   const product = await stripe.products.create({
     name: 'Custom Iphone Case',
-    images: [configuration.imageUrl],
+    images: [configuration.croppedImageUrl!],
     default_price_data: { currency: 'USD', unit_amount: price },
   })
 
   //* 6 - Create stripe session
   const stripeSession = await stripe.checkout.sessions.create({
-    success_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/thank-you?orderId=${order.id}`,
+    success_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/thank-you?orderId=${order.id}`,
     cancel_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/configure/preview?id=${configuration.id}`,
     payment_method_types: ['card'],
     mode: 'payment',
