@@ -8,6 +8,7 @@ const allowedOrigins = [
 const corsOptions = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
 }
 
 export function proxy(request: NextRequest) {
@@ -22,8 +23,9 @@ export function proxy(request: NextRequest) {
     const preflightHeaders = {
       ...(isAllowedOrigin && { 'Access-Control-Allow-Origin': origin }),
       ...corsOptions,
+      'Access-Control-Allow-Credentials': 'true',
     }
-    return NextResponse.json({}, { headers: preflightHeaders })
+    return new Response(null, { status: 204, headers: preflightHeaders })
   }
 
   // Handle simple requests
@@ -41,5 +43,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/api/:path*', '/auth-callback/:path*'],
 }
