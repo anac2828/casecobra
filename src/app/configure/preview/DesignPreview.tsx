@@ -25,6 +25,7 @@ export default function DesignPreview({
 }) {
   const router = useRouter()
   const { user } = useKindeBrowserClient()
+
   // ** Confetti State
   const [showConfetti, setShowConfetti] = useState<boolean>(false)
   // ** Modal state
@@ -65,6 +66,7 @@ export default function DesignPreview({
   })
 
   const handleCheckout = () => {
+    console.log(user)
     if (user) {
       // If user is logged in continue checkout
       createPaymentSession({ configId: configuration.id })
