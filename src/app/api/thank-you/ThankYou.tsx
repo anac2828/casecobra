@@ -9,7 +9,7 @@ import { formatPrice } from '@/src/lib/utils'
 
 // ** COMPONENT
 export default function ThankYou() {
-  // 1 Get order id from URL
+  //* 1 Get order id from URL - passed in by the createCheckoutSession in /preview/actions.ts
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId') || ''
 
@@ -29,7 +29,7 @@ export default function ThankYou() {
     )
   }
 
-  //2 If order is not paid
+  //* 2 If order is not paid
   if (data === false) {
     return (
       <div className='w-full my-24 flex justify-center'>
@@ -42,7 +42,7 @@ export default function ThankYou() {
     )
   }
 
-  //3 ORDER DETAILS
+  //* 3 ORDER DETAILS
   // Loading order component
   if (isPending) {
     return (
@@ -56,7 +56,7 @@ export default function ThankYou() {
     )
   }
 
-  //4 Order details - http://localhost:3000/api/thank-you?orderId=cmma7gbho00012kv9wyslnlxe
+  //* 4 Order details - http://localhost:3000/api/thank-you?orderId=cmma7gbho00012kv9wyslnlxe
   const { configuration, billingAddress, shippingAddress, amount } = data
   const { color } = configuration
 

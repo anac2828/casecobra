@@ -54,6 +54,7 @@ export default function DesignPreview({
   const { mutate: createPaymentSession, isPending } = useMutation({
     mutationKey: ['get-checkout-session'],
     mutationFn: createCheckoutSession,
+    // url = /api/thank-you
     onSuccess: ({ url }) => {
       if (url) router.push(url)
       else throw new Error('Unable to retrive payment URL.')
@@ -66,12 +67,11 @@ export default function DesignPreview({
   })
 
   const handleCheckout = () => {
-    console.log(user)
     if (user) {
       // If user is logged in continue checkout
       createPaymentSession({ configId: configuration.id })
     } else {
-      // If use is not logged in save the configuration id to retrive it after user logs in.
+      // If user is not logged in save the configuration id. /preview/page.tsx retrieves the config id
       localStorage.setItem('configurationId', configuration.id)
       setShowLoginModal(true)
     }

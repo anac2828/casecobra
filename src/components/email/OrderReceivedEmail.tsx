@@ -14,11 +14,6 @@ import {
   Text,
 } from '@react-email/components'
 
-const baseUrl =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000/dashboard'
-    : 'https://casecobra-ac2026.vercel.app/'
-
 export default function OrderReceivedEmail({
   shippingAddress,
   orderId,
@@ -36,7 +31,7 @@ export default function OrderReceivedEmail({
         <Container style={container}>
           <Section style={message}>
             <Img
-              src={`${baseUrl}/snake-3.png`}
+              src={`${process.env.NEXT_PUBLIC_SERVER_URL}/snake-3.png`}
               width='65'
               height='73'
               alt='delivery snake'
