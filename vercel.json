@@ -7,11 +7,11 @@
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+          "value": "GET,POST,PUT,DELETE,OPTIONS"
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
+          "value": "Content-Type, Authorization, X-Requested-With, Accept, RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, Cache-Control, next-router-prefetch, next-router-segment-prefetch, next-url, rsc"
         }
       ]
     }

@@ -7,7 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { LoginLink } from '@kinde-oss/kinde-auth-nextjs'
+import {
+  LoginLink,
+  RegisterLink,
+} from '@kinde-oss/kinde-auth-nextjs/components'
+
 import { buttonVariants } from '@/components/ui/button'
 
 export default function LoginModal({
@@ -44,9 +48,9 @@ export default function LoginModal({
           <LoginLink className={buttonVariants({ variant: 'outline' })}>
             Login
           </LoginLink>
-          <LoginLink className={buttonVariants({ variant: 'default' })}>
+          <RegisterLink className={buttonVariants({ variant: 'default' })}>
             Sign up
-          </LoginLink>
+          </RegisterLink>
         </div>
       </DialogContent>
     </Dialog>

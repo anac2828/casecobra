@@ -4,22 +4,21 @@ import { NextRequest, NextResponse } from 'next/server'
 const allowedOrigins = [
   'https://casecobraac.kinde.com',
   'https://casecobra-ac2026.vercel.app',
-  // Add localhost for dev if testing locally
-  // 'http://localhost:3000',
+  // Add for previews if testing branches: 'https://casecobra-ac2026-*.vercel.app'
+  // 'http://localhost:3000' for dev
 ]
 
 const corsOptions = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':
-    'Content-Type, Authorization, X-Requested-With, Accept',
+    'Content-Type, Authorization, X-Requested-With, Accept, RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, Cache-Control',
   'Access-Control-Allow-Credentials': 'true',
-  // Optional: Cache preflight responses (reduces OPTIONS spam)
-  'Access-Control-Max-Age': '86400',
+  'Access-Control-Max-Age': '86400', // Cache preflight to reduce spam
 }
 
 export function proxy(request: NextRequest) {
   const origin = request.headers.get('origin') ?? ''
-  // Allow empty/null origin (common for same-origin prefetch)
+  // Allow empty/null origin (RSC/prefetch/redirects often send this)
   const isAllowedOrigin =
     allowedOrigins.includes(origin) || origin === '' || origin === null
 
@@ -29,8 +28,8 @@ export function proxy(request: NextRequest) {
     const preflightHeaders = {
       ...(isAllowedOrigin && { 'Access-Control-Allow-Origin': origin || '*' }),
       ...corsOptions,
-      // Explicitly allow Next.js prefetch headers to pass CORS check
-      'Access-Control-Allow-Headers': `${corsOptions['Access-Control-Allow-Headers']}, next-router-prefetch, next-router-segment-prefetch, next-url, rsc, next-router-state-tree`,
+      // Explicitly permit Kinde/RSC/custom headers
+      'Access-Control-Allow-Headers': `${corsOptions['Access-Control-Allow-Headers']}, next-router-prefetch, next-router-segment-prefetch, next-url, rsc`,
     }
 
     return new Response(null, {
@@ -54,8 +53,9 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/api/:path*',
+    '/api/:path*', // All API routes
+    '/api/auth/:path*', // ← Critical for Kinde: /api/auth/logout, /api/auth/callback, etc.
     '/auth-callback/:path*',
-    '/:path*', // ← Critical: catches root /, all pages, prefetch requests
+    '/:path*', // Catch root /, pages, RSC fetches, redirects
   ],
 }
