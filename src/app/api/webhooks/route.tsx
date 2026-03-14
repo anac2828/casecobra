@@ -1,12 +1,12 @@
-import { headers } from 'next/headers'
-import { NextResponse } from 'next/server'
+// app/api/webhook/stripe/route.ts
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { Resend } from 'resend'
-import { stripe } from '@/src/lib/stripe'
+import { stripe } from '@/src/lib/stripe' // your initialized stripe instance
 import { db } from '@/src/db'
+import { Resend } from 'resend'
 import OrderReceivedEmail from '@/src/components/email/OrderReceivedEmail'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY!)
 
 interface CustomSession extends Stripe.Checkout.Session {
   shipping?: {
@@ -14,80 +14,84 @@ interface CustomSession extends Stripe.Checkout.Session {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    //* 1 Get request body from stripe when user pays in the stripe portal
+    // 1. Get raw body and signature
+    const body = await req.text() // ← Raw string is critical!
+    const signature = req.headers.get('stripe-signature')
 
-    const body = await req.text()
-    const signature = (await headers()).get('stripe-signature')
-
-    //  Signature error handler
     if (!signature) {
-      return new Response('Missing stripe-signature header', { status: 400 })
+      return new NextResponse('Missing stripe-signature', { status: 400 })
     }
 
-    //* 2 Create webhook event
-    const event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    )
+    // 2. Verify event
+    let event: Stripe.Event
+    try {
+      event = await stripe.webhooks.constructEventAsync(
+        body,
+        signature,
+        process.env.STRIPE_WEBHOOK_SECRET!,
+      )
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.error('Webhook signature verification failed:', errorMessage)
+      return new NextResponse(`Webhook Error: ${errorMessage}`, { status: 400 })
+    }
 
-    //* 3 - Listen for event type
+    // 3. Handle specific event
     if (event.type === 'checkout.session.completed') {
-      // 1 CREATE STRIPE SESSION
-      // as Stripe.Checkout.Session is for typescript type safety
-      const session: CustomSession = event.data.object
-      // const session = event.data.object as Stripe.Checkout.Session
+      const session = event.data.object as CustomSession
 
-      // Error handler
       if (!session.customer_details?.email) {
-        throw new Error('Missing user email')
+        throw new Error('Missing customer email')
       }
 
-      // metadata saved during the checkout process in the configure/preview/actions.ts
       const { userId, orderId } = session.metadata ?? {}
+      if (!userId || !orderId) {
+        return new NextResponse('Missing metadata', { status: 400 })
+      }
 
-      // Error handler
-      if (!userId || !orderId)
-        return new NextResponse('Invalid request metadata')
+      // Shipping & billing addresses
+      const shipping = session.shipping?.address
+      const billing = session.customer_details.address
 
-      //2 - GET SHIPPING DETAILS - collected_information.shipping_details.address or .name
-      const billingAddress = session.customer_details!.address
-      const shippingAddress = session.shipping!.address
+      if (!shipping || !billing) {
+        throw new Error('Missing address details')
+      }
 
+      // Update order in DB
       const updatedOrder = await db.order.update({
         where: { id: orderId },
         data: {
           isPaid: true,
           shippingAddress: {
             create: {
-              name: session.customer_details!.name!,
-              city: shippingAddress.city!,
-              country: shippingAddress.country!,
-              postalCode: shippingAddress.postal_code!,
-              state: shippingAddress.state,
-              street: shippingAddress.line1!,
+              name: session.customer_details.name!,
+              city: shipping.city!,
+              country: shipping.country!,
+              postalCode: shipping.postal_code!,
+              state: shipping.state ?? '',
+              street: shipping.line1!,
             },
           },
           billingAddress: {
             create: {
-              name: session.customer_details!.name!,
-              city: billingAddress!.city!,
-              country: billingAddress!.country!,
-              postalCode: billingAddress!.postal_code!,
-              state: billingAddress!.state,
-              street: billingAddress!.line1!,
+              name: session.customer_details.name!,
+              city: billing.city!,
+              country: billing.country!,
+              postalCode: billing.postal_code!,
+              state: billing.state ?? '',
+              street: billing.line1!,
             },
           },
         },
       })
 
-      // To render the email component as HTML make sure route has extension .tsx
+      // Send email
       await resend.emails.send({
         from: 'Support <onboarding@resend.dev>',
-        // to: [session.customer_details?.email],
-        to: 'anac2828@yahoo.com',
+        to: session.customer_details.email, // ← Use real email!
+        // to: 'anac2828@yahoo.com', // testing only
         subject: 'Thanks for your order!',
         react: (
           <OrderReceivedEmail
@@ -95,12 +99,12 @@ export async function POST(req: Request) {
             orderDate={updatedOrder.createdAt.toLocaleDateString()}
             shippingAddress={{
               id: userId,
-              name: session.customer_details!.name!,
-              city: shippingAddress.city!,
-              country: shippingAddress.country!,
-              postalCode: shippingAddress.postal_code!,
-              state: shippingAddress.state,
-              street: shippingAddress.line1!,
+              name: session.customer_details.name!,
+              city: shipping.city!,
+              country: shipping.country!,
+              postalCode: shipping.postal_code!,
+              state: shipping.state ?? '',
+              street: shipping.line1!,
               phoneNumber: '',
             }}
           />
@@ -108,13 +112,20 @@ export async function POST(req: Request) {
       })
     }
 
-    return NextResponse.json({ result: event, ok: true })
-  } catch (err) {
-    console.error(err)
-
+    // Always return 200 to acknowledge receipt
+    return NextResponse.json({ received: true }, { status: 200 })
+  } catch (err: unknown) {
+    console.error('Webhook error:', err)
     return NextResponse.json(
-      { message: 'Something went wrong', ok: false },
+      { message: 'Internal error', ok: false },
       { status: 500 },
     )
   }
+}
+
+// Critical for Stripe: disable Next.js body parsing!
+export const config = {
+  api: {
+    bodyParser: false,
+  },
 }
